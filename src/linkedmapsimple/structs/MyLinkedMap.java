@@ -20,13 +20,14 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     /**
      * La cola (más nueva) de la lista doble enlazada
      */
-    private Entry<K,V>tail;
+    private boolean accessOrder;
     /**
      * Construye un nuevo HashMap con una cantidad a almacenar por 
      * defecto
      */
     public MyLinkedMap() {
         super();
+        accessOrder = false;
     }
     /**
      * Construye un nuevo HashMap según la cantidad de elementos que
@@ -36,6 +37,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      */
     public MyLinkedMap(int xcap) {
         super(xcap);
+        accessOrder = false;
     }
     /**
      * Construye un nuevo HashMap que utilizamos para almacenar toda una 
@@ -45,6 +47,13 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      */
     public MyLinkedMap(Map<? extends K, ? extends V> m) {
         super(m);
+        accessOrder = false;
+    }
+    
+    @Override
+    void init() {
+        head = new Entry(null, null);
+        this.clear();
     }
     /**
      * Sobreescrita: Limpieza de las entradas de nuestra estructura
@@ -52,7 +61,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     @Override
     public void clear() {
         super.clear();
-        head = tail = null;
+        head.before = head.after = head;
     }
     /**
      * Sobreescrita: Verifica si existe o no la entrada pasada por 
@@ -61,9 +70,10 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      * @param value
      * @return boolean 
      */
+    
     @Override
     public boolean containsValue(Object value) {
-        for (Entry<K,V> e = head; e != null; e = e.after) {
+        for (Entry<K,V> e = head.after; e != head; e = e.after) {
             if(value != null && value.equals(e.getValue())){
                 return true;
             }
@@ -82,129 +92,8 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         int hash = hash(key,table.length);
         Entry<K,V> e = new Entry(key, value);
         table[hash] = e;
-        maintainOrderAfterInsert(e);
+        e.addBefore(head);
         size++;
-    }
-    /*--------------------------------------------------------------------*/
-    /**
-     * Mantiene el orden de la estructura luego de ser insertada
-     * una nueva entrada
-     * 
-     * @param newEntry 
-     */
-    private void maintainOrderAfterInsert(Entry<K, V> newEntry) {           
-        if(head==null){
-           head=newEntry;
-           tail=newEntry;
-           return;
-        }      
-        if(head.key.equals(newEntry.key)){
-           deleteFirst();
-           insertFirst(newEntry);
-           return;
-        }      
-        if(tail.key.equals(newEntry.key)){
-           deleteLast();
-           insertLast(newEntry);
-           return;
-        }      
-        Entry<K, V> beforeDeleteEntry= deleteSpecificEntry(newEntry);
-        if(beforeDeleteEntry==null){
-           insertLast(newEntry);
-        }
-        else{
-           insertAfter(beforeDeleteEntry,newEntry);
-        }            
-    }
-    /*--------------------------------------------------------------------*/
-    /**
-     * Inserte la entrada en el lugar dónde será reemplazada la entrada
-     * a ser borrada
-     * 
-     * @param beforeDeleteEntry
-     * @param newEntry 
-     */
-    private void insertAfter(Entry<K, V> beforeDeleteEntry, Entry<K, V> newEntry) {
-        Entry<K, V> current=head;
-        while(current!=beforeDeleteEntry){
-               current=current.after;  //move to next node.
-        }           
-        newEntry.after=beforeDeleteEntry.after;
-        beforeDeleteEntry.after.before=newEntry;
-        newEntry.before=beforeDeleteEntry;
-        beforeDeleteEntry.after=newEntry;           
-    }    
-    /**
-     * Inserta la entrada al principio de los punteros
-     * 
-     * @param newEntry 
-     */
-    private void insertFirst(Entry<K, V> newEntry){                 
-        if(head==null){ //no entry found
-            head=newEntry;
-            tail=newEntry;
-        } else {           
-            newEntry.after=head;
-            head.before=newEntry;
-            head=newEntry;
-        }           
-    }    
-    /**
-     * Inserta la entrada al final de los punteros
-     * 
-     * @param newEntry 
-     */
-    private void insertLast(Entry<K, V> newEntry){           
-        if(head==null){
-            head=newEntry;
-            tail=newEntry;
-        } else {
-           tail.after=newEntry;
-           newEntry.before=tail;
-           tail=newEntry;
-        }
-    }
-    /*--------------------------------------------------------------------*/
-    /**
-     * Elimina la entrada que encabeza los punteros
-     */
-    private void deleteFirst(){ 
-        if(head==tail){ //only one entry found.
-            head=tail=null;
-        } else {
-           head=head.after;
-           head.before=null; 
-        }           
-    }
-    /**
-     * Elimina la entrada del final de los punteros
-     */
-    private void deleteLast(){           
-        if(head==tail){ //only one entry found.
-            head=tail=null;
-        } else {           
-           tail=tail.before;
-           tail.after=null; 
-        }
-    }
-    /**
-     * Encuentra una entrada específica para luego ser borrada
-     * 
-     * @param newEntry
-     * @return Entry<K, V>
-     */
-    private Entry<K, V> deleteSpecificEntry(Entry<K, V> newEntry){                        
-        Entry<K, V> current=head;
-        while(!current.key.equals(newEntry.key)){
-            if(current.after==null){   //entry not found
-                  return null;
-            }
-            current=current.after;  //move to next node.
-        }           
-        Entry<K, V> beforeDeleteEntry=current.before;
-        current.before.after=current.after;
-        current.after.before=current.before;  //entry deleted
-        return beforeDeleteEntry;
     }
     /*--------------------------------------------------------------------*/
     /**
@@ -368,7 +257,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
          * Construye una nueva iteración linked-hash
          */        
         LinkedHashIterator() {
-            next = head;
+            next = head.after;
             current = null;
         }
         /**
@@ -378,7 +267,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
          */
         @Override
         public boolean hasNext() {
-            return next != null;
+            return next != head;
         }
         /**
          * Obtiene la entrada próxima, y también es una función 
@@ -403,10 +292,32 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      * @param <V> 
      */
     class Entry<K,V> extends MyMap.Entry {
-        Entry<K,V> before = null;
-        Entry<K,V> after = null;
+        Entry<K,V> before, after;
         public Entry(K xkey, V xvalue) {
             super(xkey, xvalue);
         }
+        private void addBefore(Entry<K,V> existingEntry) {
+            before = existingEntry.before;
+            after  = existingEntry;
+            before.after = this;
+            after.before = this;
+        }
+
+        @Override
+        void recordAccess(MyMap m) {
+            MyLinkedMap<K,V> lm = (MyLinkedMap<K,V>)m;
+            if (lm.accessOrder) {
+                remove();
+                addBefore((Entry<K, V>) lm.head);
+            }
+        }
+        @Override
+        void recordRemoval(MyMap m) {
+            remove();
+        }
+        private void remove() {
+            before.after = after;
+            after.before = before;
+        }       
     }
 }

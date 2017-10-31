@@ -34,6 +34,7 @@ public class MyMap<K,V> implements Map<K,V>
         }
         table = new Entry[xcap];
         size = 0;
+        init();
     }
     /**
      * Construye un nuevo HashMap que utilizamos para almacenar toda una 
@@ -45,6 +46,8 @@ public class MyMap<K,V> implements Map<K,V>
         this(m.size());
         this.putAll(m);
     }
+    
+    void init() { }
     /**
      * Devuelve la cantidad de elementos almacenados en nuestra
      * estructura de datos
@@ -148,9 +151,11 @@ public class MyMap<K,V> implements Map<K,V>
                 if(e.getKey().equals(key)){
                     V oldValue = e.getValue();
                     e.setValue(value);
+                    e.recordAccess(this);
                     return oldValue;
                 } else if(e.next == null){
                     e.next = new Entry(key,value);
+                    e.recordAccess(this);
                     size++;
                     return value;
                 }                
@@ -170,11 +175,8 @@ public class MyMap<K,V> implements Map<K,V>
     private void addEntry(K key, V value){
         if(size >= table.length * 0.75){
             Entry<K,V>[] tmp = table;
-            size = 0;
             table = Arrays.copyOf(table, table.length * 2);
-            for(int i = 0; i < table.length; i++){
-                table[i] = null;
-            }
+            this.clear();
             for (Entry<K, V> e : tmp) {     
                 if(e != null){
                     put(e.getKey(),e.getValue());
@@ -227,6 +229,7 @@ public class MyMap<K,V> implements Map<K,V>
                 } else {
                     last.next = e.next;
                 }
+                e.recordRemoval(this);
                 size--;
                 return (V) e.value;
             }
@@ -484,6 +487,12 @@ public class MyMap<K,V> implements Map<K,V>
             V val = value;
             value = v;
             return val;
-        }        
+        }
+        void recordAccess(MyMap<K,V> m) { }
+        void recordRemoval(MyMap<K,V> m) { }        
+        @Override
+        public String toString() {
+            return "["+ this.getKey() + " -> " + this.getValue() + "]";
+        }
     } 
 }
