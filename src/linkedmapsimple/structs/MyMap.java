@@ -146,18 +146,15 @@ public class MyMap<K,V> implements Map<K,V>
     @Override
     public V put(K key, V value) {
         if(key != null){
-            int hash = hash(key,table.length);
+            int hash = hash(key,table.length);           
             for(Entry<K,V> e = table[hash]; e != null; e = e.next){
                 if(e.getKey().equals(key)){
                     V oldValue = e.getValue();
                     e.setValue(value);
                     e.recordAccess(this);
                     return oldValue;
-                } else if(e.next == null){
-                    e.next = new Entry(key,value);
-                    e.recordAccess(this);
-                    size++;
-                    return value;
+                } else if(e.next == null) {
+                    return e.chain(key, value);
                 }                
             }
             this.addEntry(key, value);
@@ -166,13 +163,14 @@ public class MyMap<K,V> implements Map<K,V>
             return null;
         }
     }
+        
     /**
      * Almacenamos la clave/valor a nuestra estructura de datos
      * 
      * @param key -> clave
      * @param value -> valor
      */
-    private void addEntry(K key, V value){
+    protected void addEntry(K key, V value){
         if(size >= table.length * 0.75){
             Entry<K,V>[] tmp = table;
             table = Arrays.copyOf(table, table.length * 2);
@@ -180,8 +178,11 @@ public class MyMap<K,V> implements Map<K,V>
             for (Entry<K, V> e : tmp) {     
                 if(e != null){
                     put(e.getKey(),e.getValue());
+                    for(;e != null; e = e.next){
+                        put(e.getKey(),e.getValue());
+                    }
                 }
-            }            
+            } 
         }
         this.createEntry(key,value);
     }
@@ -192,7 +193,7 @@ public class MyMap<K,V> implements Map<K,V>
      * @param value 
      */
     protected void createEntry(K key, V value){
-        int hash = hash(key,table.length);
+        int hash = hash(key,table.length);        
         table[hash] = new Entry(key, value);
         size++;
     }
@@ -201,7 +202,7 @@ public class MyMap<K,V> implements Map<K,V>
      * nuestro HashMap "casero"
      * 
      * @param m -> mapa de clave/valor
-     */
+    */
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
         if(m.size() > 0){
@@ -223,7 +224,7 @@ public class MyMap<K,V> implements Map<K,V>
         int hash = hash(key, table.length);
         Entry last = null;
         for (Entry e = table[hash]; e != null; e = e.next) {
-            if (key.equals(e.getKey())) {
+            if (key != null && key.equals(e.getKey())) {
                 if (last == null) {
                     table[hash] = e.next;
                 } else {
@@ -489,7 +490,12 @@ public class MyMap<K,V> implements Map<K,V>
             return val;
         }
         void recordAccess(MyMap<K,V> m) { }
-        void recordRemoval(MyMap<K,V> m) { }        
+        void recordRemoval(MyMap<K,V> m) { }
+        V chain(K key, V value){
+            this.next = new Entry(key,value);
+            size++;
+            return value;
+        }
         @Override
         public String toString() {
             return "["+ this.getKey() + " -> " + this.getValue() + "]";

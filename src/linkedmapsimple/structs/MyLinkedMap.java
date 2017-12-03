@@ -48,8 +48,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     public MyLinkedMap(Map<? extends K, ? extends V> m) {
         super(m);
         accessOrder = false;
-    }
-    
+    }    
     @Override
     void init() {
         head = new Entry(null, null);
@@ -62,15 +61,14 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     public void clear() {
         super.clear();
         head.before = head.after = head;
-    }
+    } 
     /**
      * Sobreescrita: Verifica si existe o no la entrada pasada por 
      * parámetro
      * 
      * @param value
      * @return boolean 
-     */
-    
+     */    
     @Override
     public boolean containsValue(Object value) {
         for (Entry<K,V> e = head.after; e != head; e = e.after) {
@@ -89,9 +87,9 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      */
     @Override
     protected void createEntry(K key, V value) {
-        int hash = hash(key,table.length);
+        int hash = hash(key,table.length);  
         Entry<K,V> e = new Entry(key, value);
-        table[hash] = e;
+        table[hash] = e;        
         e.addBefore(head);
         size++;
     }
@@ -232,7 +230,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         public int size() {
             return size;
         }        
-    }
+    }      
     /**
      * Clase interna para dar estilo al recorrido de los valores
      * ordenados según la inserción
@@ -296,13 +294,12 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         public Entry(K xkey, V xvalue) {
             super(xkey, xvalue);
         }
-        private void addBefore(Entry<K,V> existingEntry) {
-            before = existingEntry.before;
-            after  = existingEntry;
+        void addBefore(Entry<K,V> existingEntry) {
+            before = (Entry<K, V>) head.before;
+            after  = (Entry<K, V>) head;
             before.after = this;
             after.before = this;
         }
-
         @Override
         void recordAccess(MyMap m) {
             MyLinkedMap<K,V> lm = (MyLinkedMap<K,V>)m;
@@ -314,7 +311,14 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         @Override
         void recordRemoval(MyMap m) {
             remove();
-        }
+        }   
+        @Override
+        Object chain(Object key, Object value) {
+            this.next = new Entry(key,value);
+            ((MyLinkedMap.Entry)this.next).addBefore(head);            
+            size++;
+            return value;
+        }       
         private void remove() {
             before.after = after;
             after.before = before;
