@@ -14,11 +14,11 @@ import java.util.Set;
 public class MyLinkedMap<K,V> extends MyMap<K,V>
 {
     /**
-     * La cabeza (más vieja) de la lista doble enlazada
+     * La cabeza de la lista enlazada
      */
-    private Entry<K,V>head;
+    private Entry<K,V>header;
     /**
-     * La cola (más nueva) de la lista doble enlazada
+     * 
      */
     private boolean accessOrder;
     /**
@@ -51,7 +51,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     }    
     @Override
     void init() {
-        head = new Entry(null, null);
+        header = new Entry(null, null);
         this.clear();
     }
     /**
@@ -60,7 +60,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     @Override
     public void clear() {
         super.clear();
-        head.before = head.after = head;
+        header.before = header.after = header;
     } 
     /**
      * Sobreescrita: Verifica si existe o no la entrada pasada por 
@@ -71,13 +71,14 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      */    
     @Override
     public boolean containsValue(Object value) {
-        for (Entry<K,V> e = head.after; e != head; e = e.after) {
+        for (Entry<K,V> e = header.after; e != header; e = e.after) {
             if(value != null && value.equals(e.getValue())){
                 return true;
             }
         }
         return false;
     }
+    
     /**
      * Sobreescrita: Creamos una nueva entrada, la cual mantenemos
      * el orden de la misma
@@ -87,10 +88,10 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      */
     @Override
     protected void createEntry(K key, V value) {
-        int hash = hash(key,table.length);  
+        int hash = hash(key,table.length);
         Entry<K,V> e = new Entry(key, value);
         table[hash] = e;        
-        e.addBefore(head);
+        e.addBefore(header);
         size++;
     }
     /*--------------------------------------------------------------------*/
@@ -129,6 +130,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
             return size;
         }        
     }
+    
     /**
      * Clase interna para dar estilo al recorrido de las entradas
      * ordenadas según la inserción
@@ -255,7 +257,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
          * Construye una nueva iteración linked-hash
          */        
         LinkedHashIterator() {
-            next = head.after;
+            next = header.after;
             current = null;
         }
         /**
@@ -265,7 +267,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
          */
         @Override
         public boolean hasNext() {
-            return next != head;
+            return next != header;
         }
         /**
          * Obtiene la entrada próxima, y también es una función 
@@ -294,18 +296,19 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         public Entry(K xkey, V xvalue) {
             super(xkey, xvalue);
         }
-        void addBefore(Entry<K,V> existingEntry) {
-            before = (Entry<K, V>) head.before;
-            after  = (Entry<K, V>) head;
+        
+        void addBefore(Entry<K, V> entry) {
+            after  = (Entry<K, V>) entry;
+            before = (Entry<K, V>) entry.before;                        
             before.after = this;
-            after.before = this;
+            after.before = this;            
         }
         @Override
         void recordAccess(MyMap m) {
             MyLinkedMap<K,V> lm = (MyLinkedMap<K,V>)m;
             if (lm.accessOrder) {
                 remove();
-                addBefore((Entry<K, V>) lm.head);
+                addBefore((Entry<K, V>) lm.header);
             }
         }
         @Override
@@ -315,7 +318,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         @Override
         Object chain(Object key, Object value) {
             this.next = new Entry(key,value);
-            ((MyLinkedMap.Entry)this.next).addBefore(head);            
+            ((MyLinkedMap.Entry)this.next).addBefore(header);            
             size++;
             return value;
         }       

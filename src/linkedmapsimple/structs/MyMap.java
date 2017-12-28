@@ -1,7 +1,6 @@
 package linkedmapsimple.structs;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -14,6 +13,8 @@ import java.util.Set;
 public class MyMap<K,V> implements Map<K,V>
 {
     transient Entry<K,V>[] table;
+    private static final float LOAD_FACTOR = 0.75f;
+    private static int threshold;
     transient int size;
     /**
      * Construye un nuevo HashMap con una cantidad a almacenar por 
@@ -32,6 +33,7 @@ public class MyMap<K,V> implements Map<K,V>
         if(xcap <= 0){
             throw new IllegalArgumentException("Capacidad no permitida: " + xcap);
         }
+        threshold = (int) (xcap * LOAD_FACTOR);
         table = new Entry[xcap];
         size = 0;
         init();
@@ -146,8 +148,8 @@ public class MyMap<K,V> implements Map<K,V>
     @Override
     public V put(K key, V value) {
         if(key != null){
-            int hash = hash(key,table.length);           
-            for(Entry<K,V> e = table[hash]; e != null; e = e.next){
+            int hash = hash(key,table.length);   
+            for(Entry<K,V> e = table[hash]; e != null ; e = e.next){
                 if(e.getKey().equals(key)){
                     V oldValue = e.getValue();
                     e.setValue(value);
@@ -157,43 +159,56 @@ public class MyMap<K,V> implements Map<K,V>
                     return e.chain(key, value);
                 }                
             }
-            this.addEntry(key, value);
+            addEntry(key, value);
             return value;                     
         } else {
             return null;
         }
     }
-        
     /**
      * Almacenamos la clave/valor a nuestra estructura de datos
      * 
-     * @param key -> clave
-     * @param value -> valor
+     * @param key
+     * @param value
+     * @param hash 
      */
-    protected void addEntry(K key, V value){
-        if(size >= table.length * 0.75){
-            Entry<K,V>[] tmp = table;
-            table = Arrays.copyOf(table, table.length * 2);
-            this.clear();
-            for (Entry<K, V> e : tmp) {     
-                if(e != null){
-                    put(e.getKey(),e.getValue());
-                    for(;e != null; e = e.next){
-                        put(e.getKey(),e.getValue());
-                    }
-                }
-            } 
+    private void addEntry(K key, V value){
+        if(size >= threshold){
+            Entry newTable[] = new Entry[table.length * 2];
+            transfer(newTable);
+            table = newTable;
+            threshold = (int)(newTable.length * LOAD_FACTOR);
         }
-        this.createEntry(key,value);
+        createEntry(key, value);
+    }
+    /**
+     * Transfiere todo el contenido de los datos al array temporal
+     * 
+     * @param newTable 
+     */
+    private void transfer(Entry newTable[]){
+        for (Entry<K, V> entry : table) {
+            if (entry != null) {
+                Entry<K,V> current = entry;
+                while(current != null){
+                    Entry<K,V> et = current;
+                    current = current.next;
+                    int index = hash(et.key,newTable.length);
+                    et.next = newTable[index];
+                    newTable[index] = et;
+                }
+            }
+        }
     }
     /**
      * Creamos una entrada nueva
      * 
      * @param key
      * @param value 
+     * @param hash 
      */
     protected void createEntry(K key, V value){
-        int hash = hash(key,table.length);        
+        int hash = hash(key,table.length);
         table[hash] = new Entry(key, value);
         size++;
     }
@@ -202,7 +217,7 @@ public class MyMap<K,V> implements Map<K,V>
      * nuestro HashMap "casero"
      * 
      * @param m -> mapa de clave/valor
-    */
+     */
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
         if(m.size() > 0){
@@ -221,7 +236,7 @@ public class MyMap<K,V> implements Map<K,V>
      */
     @Override
     public V remove(Object key) {
-        int hash = hash(key, table.length);
+        int hash = hash(key,table.length);
         Entry last = null;
         for (Entry e = table[hash]; e != null; e = e.next) {
             if (key != null && key.equals(e.getKey())) {
@@ -244,6 +259,7 @@ public class MyMap<K,V> implements Map<K,V>
      * clave y al largo (array) pasados por parámetro 
      * 
      * @param key -> clave
+     * @param length
      * @return int -> índice para obtener una entrada existente
      */
     protected int hash(Object key, int length) {
