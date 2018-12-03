@@ -15,5 +15,7 @@ public class Cuerpo {
         t1.test();
         t1 = new DownTest();
         t1.test();
+        t1 = new PointersTest();
+        t1.test();
     }    
 }

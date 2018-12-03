@@ -16,10 +16,18 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     /**
      * La cabeza de la lista enlazada
      */
-    private Entry<K,V>header;
+    private Entry<K,V>head;
     /**
-     * 
+     * La cola de la lista enlazada
      */
+    private Entry<K,V>tail;
+    /**
+      * El método de ordenación de iteración para este hashmap enlazado: 
+      * {@code true} para el orden de acceso, {@code false} para el orden 
+      * de la inserción.
+      *
+      * @serial
+    */
     private boolean accessOrder;
     /**
      * Construye un nuevo HashMap con una cantidad a almacenar por 
@@ -48,11 +56,14 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     public MyLinkedMap(Map<? extends K, ? extends V> m) {
         super(m);
         accessOrder = false;
-    }    
+    }
+    /**
+     * Sobreescrita: inicializa la cabeza y cola de la estructura de datos
+     * a un estado por defecto
+     */
     @Override
     void init() {
-        header = new Entry(null, null);
-        this.clear();
+        head = tail = null;
     }
     /**
      * Sobreescrita: Limpieza de las entradas de nuestra estructura
@@ -60,7 +71,8 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
     @Override
     public void clear() {
         super.clear();
-        header.before = header.after = header;
+        head = tail = null;
+        //head.before = head.after = head;
     } 
     /**
      * Sobreescrita: Verifica si existe o no la entrada pasada por 
@@ -71,14 +83,13 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
      */    
     @Override
     public boolean containsValue(Object value) {
-        for (Entry<K,V> e = header.after; e != header; e = e.after) {
+        for (Entry<K,V> e = head; e != null; e = e.after) {
             if(value != null && value.equals(e.getValue())){
                 return true;
             }
         }
         return false;
-    }
-    
+    }    
     /**
      * Sobreescrita: Creamos una nueva entrada, la cual mantenemos
      * el orden de la misma
@@ -91,9 +102,56 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         int hash = hash(key,table.length);
         Entry<K,V> e = new Entry(key, value);
         table[hash] = e;        
-        e.addBefore(header);
+        linkNodeLast(e);
         size++;
     }
+    /**
+     * Enlaza la entrada clave/valor hacia el final de la lista
+     * 
+     * @param p -> entrada con clave y valor
+     */
+    private void linkNodeLast(Entry<K,V> p) {
+        Entry<K,V> last = tail;
+        tail = p;
+        if (last == null)
+            head = p;
+        else {
+            p.before = last;
+            last.after = p;
+        }
+    }
+    /**
+     * Obtiene la clave del inicio de la lista
+     * 
+     * @return K -> clave 
+     */
+    public K firstKey(){
+        return (head == null) ? null : (K) head.getKey();
+    }
+    /**
+     * Obtiene la entrada clave/valor del inicio de la lista
+     * 
+     * @return Entry<K,V> -> entrada clave/valor
+     */
+    public Entry<K,V> firstEntry(){
+        return head;
+    }
+    /**
+     * Obtiene la clave del fin de la lista
+     * 
+     * @return K -> clave 
+     */
+    public K lastKey(){
+        return (tail == null) ? null : (K) tail.getKey();
+    }
+    /**
+     * Obtiene la entrada clave/valor del fin de la lista
+     * 
+     * @return Entry<K,V> -> entrada clave/valor
+     */
+    public Entry<K,V> lastEntry(){
+        return tail;
+    }    
     /*--------------------------------------------------------------------*/
     /**
      * Devuelve un conjunto de las entradas almacenadas en 
@@ -257,7 +315,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
          * Construye una nueva iteración linked-hash
          */        
         LinkedHashIterator() {
-            next = header.after;
+            next = head;
             current = null;
         }
         /**
@@ -267,7 +325,7 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
          */
         @Override
         public boolean hasNext() {
-            return next != header;
+            return next != null;
         }
         /**
          * Obtiene la entrada próxima, y también es una función 
@@ -295,36 +353,69 @@ public class MyLinkedMap<K,V> extends MyMap<K,V>
         Entry<K,V> before, after;
         public Entry(K xkey, V xvalue) {
             super(xkey, xvalue);
-        }
-        
-        void addBefore(Entry<K, V> entry) {
-            after  = (Entry<K, V>) entry;
-            before = (Entry<K, V>) entry.before;                        
-            before.after = this;
-            after.before = this;            
-        }
+        }    
+        /**
+         * Sobreescrita: Reemplaza la entrada con clave existente de la lista 
+         * por la existente
+         * 
+         * @param m 
+         */
         @Override
-        void recordAccess(MyMap m) {
-            MyLinkedMap<K,V> lm = (MyLinkedMap<K,V>)m;
-            if (lm.accessOrder) {
-                remove();
-                addBefore((Entry<K, V>) lm.header);
+        void afterNodeAccess(MyMap m) {
+            Entry<K,V> last;
+            if (accessOrder && (last = ((MyLinkedMap)m).tail) != this) {
+                Entry<K,V> b = this.before; 
+                Entry<K,V> a = this.after;
+                this.after = null;
+                if (b == null)
+                    ((MyLinkedMap)m).head = a;
+                else
+                    b.after = a;
+                if (a != null)
+                    a.before = b;
+                else
+                    last = b;
+                if (last == null)
+                    ((MyLinkedMap)m).head = this;
+                else {
+                    this.before = last;
+                    last.after = this;
+                }
+                ((MyLinkedMap)m).tail = this;
             }
         }
+        /**
+         * Sobreescrita: Remueve la entrada existente de la lista
+         * 
+         * @param m 
+         */
         @Override
-        void recordRemoval(MyMap m) {
-            remove();
+        void afterNodeRemoval(MyMap m) {
+            Entry<K,V> b = this.before, a = this.after;
+            this.before = this.after = null;
+            if (b == null)
+                ((MyLinkedMap)m).head = a;
+            else
+                b.after = a;
+            if (a == null)
+                ((MyLinkedMap)m).tail = b;
+            else
+                a.before = b;
         }   
+        /**
+         * Sobreescrita: función útil para las colisiones de los hashing
+         * y mantener el órden de la lista
+         * 
+         * @param key
+         * @param value
+         * @return Object -> Objeto
+         */
         @Override
         Object chain(Object key, Object value) {
             this.next = new Entry(key,value);
-            ((MyLinkedMap.Entry)this.next).addBefore(header);            
+            linkNodeLast((MyLinkedMap.Entry)this.next);
             size++;
             return value;
-        }       
-        private void remove() {
-            before.after = after;
-            after.before = before;
-        }       
+        }                      
     }
 }

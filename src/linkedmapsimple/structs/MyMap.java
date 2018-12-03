@@ -48,7 +48,9 @@ public class MyMap<K,V> implements Map<K,V>
         this(m.size());
         this.putAll(m);
     }
-    
+    /**
+     * Inicializa la cabeza la estructura de datos a un estado por defecto
+     */
     void init() { }
     /**
      * Devuelve la cantidad de elementos almacenados en nuestra
@@ -153,7 +155,7 @@ public class MyMap<K,V> implements Map<K,V>
                 if(e.getKey().equals(key)){
                     V oldValue = e.getValue();
                     e.setValue(value);
-                    e.recordAccess(this);
+                    e.afterNodeAccess(this);
                     return oldValue;
                 } else if(e.next == null) {
                     return e.chain(key, value);
@@ -245,7 +247,7 @@ public class MyMap<K,V> implements Map<K,V>
                 } else {
                     last.next = e.next;
                 }
-                e.recordRemoval(this);
+                e.afterNodeRemoval(this);
                 size--;
                 return (V) e.value;
             }
@@ -505,8 +507,28 @@ public class MyMap<K,V> implements Map<K,V>
             value = v;
             return val;
         }
-        void recordAccess(MyMap<K,V> m) { }
-        void recordRemoval(MyMap<K,V> m) { }
+        /**
+         * Reemplaza la entrada con clave existente de la lista por la 
+         * existente (Método para sobreescribir en MyLinkedMap).
+         * 
+         * @param m 
+         */
+        void afterNodeAccess(MyMap<K,V> m) { }
+        /**
+         * Remueve la entrada existente de la lista (Método para sobreescribir 
+         * en MyLinkedMap).
+         * 
+         * @param m 
+         */
+        void afterNodeRemoval(MyMap<K,V> m) { }
+        /**
+         * Sobreescrita: función útil para las colisiones de los hashing
+         * y mantener el órden de la lista
+         * 
+         * @param key
+         * @param value
+         * @return V -> valor
+         */
         V chain(K key, V value){
             this.next = new Entry(key,value);
             size++;
